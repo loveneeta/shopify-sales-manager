@@ -162,6 +162,14 @@ export const api = {
       method: 'POST',
       body: formData
     });
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await res.text();
+      if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+        throw new Error('Backend server is not reachable on this host.');
+      }
+      throw new Error(`Upload returned unexpected response (${res.status})`);
+    }
     const data = await res.json();
     if (!res.ok || data.success === false) {
       throw new Error(data.error || 'Upload failed');
