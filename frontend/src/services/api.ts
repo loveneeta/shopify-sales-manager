@@ -25,6 +25,15 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     }
   });
 
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text();
+    if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+      throw new Error('Backend server is not connected. Please add VITE_API_URL in your Vercel Project Settings > Environment Variables.');
+    }
+    throw new Error(`API returned unexpected response (${res.status}): ${text.slice(0, 100)}`);
+  }
+
   const data = await res.json();
   if (!res.ok || data.success === false) {
     throw new Error(data.error || `Request failed with HTTP ${res.status}`);
