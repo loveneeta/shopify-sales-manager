@@ -116,8 +116,11 @@ export const ReportsUpdatesView: React.FC = () => {
       triggerGenerate(startStr, dEnd, type);
     } else if (type === 'monthly') {
       const now = new Date();
-      const startStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-      const endStr = now.toISOString().slice(0, 10);
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const startStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      const endStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
       setStartDate(startStr);
       setEndDate(endStr);
       triggerGenerate(startStr, endStr, type);
@@ -272,7 +275,7 @@ export const ReportsUpdatesView: React.FC = () => {
               </div>
 
               {/* Preset Buttons */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <button
                   type="button"
                   onClick={() => handlePresetChange('last2days')}
@@ -307,6 +310,18 @@ export const ReportsUpdatesView: React.FC = () => {
                   }`}
                 >
                   Weekly (7 Days)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePresetChange('monthly')}
+                  className={`py-2 px-3 text-xs font-semibold rounded-lg border transition ${
+                    reportType === 'monthly'
+                      ? 'border-emerald-700 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-700'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  Monthly Report
                 </button>
 
                 <button
@@ -651,13 +666,31 @@ export const ReportsUpdatesView: React.FC = () => {
               <p className="text-xs text-slate-500">Comprehensive calendar month breakdown with high/low analysis</p>
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="month"
                 value={selectedMonth}
                 onChange={e => setSelectedMonth(e.target.value)}
                 className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 bg-white font-bold"
               />
+              <button
+                onClick={() => {
+                  const [y, m] = selectedMonth.split('-').map(Number);
+                  const startStr = `${selectedMonth}-01`;
+                  const lastDay = new Date(y, m, 0).getDate();
+                  const endStr = `${selectedMonth}-${String(lastDay).padStart(2, '0')}`;
+                  setStartDate(startStr);
+                  setEndDate(endStr);
+                  setReportType('monthly');
+                  setActiveTab('generator');
+                  triggerGenerate(startStr, endStr, 'monthly');
+                }}
+                className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-600 shadow-2xs transition"
+                title="Generate formatted WhatsApp message for this entire month"
+              >
+                <Send className="w-3.5 h-3.5 mr-1 text-emerald-700" />
+                <span>Generate WhatsApp Message</span>
+              </button>
               <button
                 onClick={() => window.open(`/api/reports/monthly/export?month=${selectedMonth}&format=xlsx`, '_blank')}
                 className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-800 hover:bg-emerald-900 text-white shadow-2xs"

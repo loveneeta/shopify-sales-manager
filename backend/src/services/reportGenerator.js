@@ -208,7 +208,7 @@ export function calculateDailyReport(startDate, endDate) {
 /**
  * Generate formatted WhatsApp message text
  */
-export function generateWhatsAppMessage(reportData, customSettings = {}, format = 'formal') {
+export function generateWhatsAppMessage(reportData, customSettings = {}, format = 'formal', reportType = 'last2days') {
   const { dailyList, consolidated, daysCount } = reportData;
 
   const defaultCustom = {
@@ -233,6 +233,81 @@ export function generateWhatsAppMessage(reportData, customSettings = {}, format 
     if (val !== null && val !== undefined) return formatINR(val);
     return c.showMissingAsNotEntered ? 'Not Entered' : '₹0';
   };
+
+  // Dedicated Monthly Report Format (Executive Consolidated Summary)
+  if (reportType === 'monthly' || daysCount > 14) {
+    const monthDate = new Date(reportData.startDate);
+    const monthName = !isNaN(monthDate.getTime()) 
+      ? monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+      : 'Monthly';
+    const activeDays = dailyList.filter(d => d.validOrders > 0 || d.expenses.totalExpenses > 0);
+
+    if (format === 'concise') {
+      let msg = `*MONTHLY SALES & EXPENSE UPDATE (${monthName})*\n`;
+      msg += `Period: ${dailyList[0]?.shortDate || ''} to ${dailyList[dailyList.length - 1]?.shortDate || ''}\n\n`;
+
+      msg += `📊 *MONTHLY SALES PERFORMANCE*\n`;
+      if (c.includeOrders) msg += `• Total Orders: ${consolidated.totalOrders}\n`;
+      if (c.includeTotalSales) msg += `• Gross Sales: ${formatINR(consolidated.grossSales)}\n`;
+      if (c.includePaidCod) msg += `• Paid: ${consolidated.paidOrders} (${formatINR(consolidated.paidSales)}) | COD: ${consolidated.codOrders} (${formatINR(consolidated.codSales)})\n`;
+      if (c.includeDiscounts && consolidated.discounts > 0) msg += `• Discounts: ${formatINR(consolidated.discounts)}\n`;
+      if (c.includeRefunds && consolidated.refunds > 0) msg += `• Refunds: ${formatINR(consolidated.refunds)}\n`;
+      if (c.includeNetSales) msg += `• Net Sales: ${formatINR(consolidated.netSales)}\n`;
+
+      msg += `\n💸 *OPERATING EXPENSES*\n`;
+      if (c.includeMetaAds) msg += `• Meta Ads: ${formatExpenseVal(consolidated.metaAdsExpenses, true)}\n`;
+      if (c.includeShipping) msg += `• Shipping: ${formatExpenseVal(consolidated.shippingExpenses, true)}\n`;
+      if (c.includePackaging && consolidated.packagingExpenses > 0) msg += `• Packaging: ${formatExpenseVal(consolidated.packagingExpenses, true)}\n`;
+      if (c.includeOther) msg += `• Other: ${formatExpenseVal(consolidated.otherExpenses, true)}\n`;
+      if (c.includeTotalExpenses) msg += `• Total Expenses: ${formatINR(consolidated.totalExpenses)}\n`;
+
+      msg += `\n📈 *NET RECONCILIATION*\n`;
+      msg += `• Gross Sales: ${formatINR(consolidated.grossSales)}\n`;
+      msg += `• Total Expenses: ${formatINR(consolidated.totalExpenses)}\n`;
+      if (c.includeNetBalance) msg += `• Net Operating Balance: ${formatINR(consolidated.netBalance)}\n`;
+      msg += `• Active Selling Days: ${activeDays.length} days\n`;
+      if (activeDays.length > 0) {
+        msg += `• Average Daily Sales: ${formatINR(consolidated.grossSales / activeDays.length)} / day\n`;
+      }
+
+      return msg.trim();
+    }
+
+    // Formal Monthly Format
+    let msg = `Good Evening Sir,\n\n`;
+    msg += `Please find below the monthly consolidated sales and expense report for ${monthName} (${dailyList[0]?.shortDate} to ${dailyList[dailyList.length - 1]?.shortDate}).\n\n`;
+    msg += `MONTHLY SALES & EXPENSE REPORT\n\n`;
+
+    msg += `1. SALES PERFORMANCE\n`;
+    if (c.includeOrders) msg += `Total Orders: ${consolidated.totalOrders}\n`;
+    if (c.includeTotalSales) msg += `Gross Sales: ${formatINR(consolidated.grossSales)}\n`;
+    if (c.includePaidCod) msg += `Paid Orders: ${consolidated.paidOrders} (${formatINR(consolidated.paidSales)})\nCOD Orders: ${consolidated.codOrders} (${formatINR(consolidated.codSales)})\n`;
+    if (c.includeDiscounts && consolidated.discounts > 0) msg += `Discounts: ${formatINR(consolidated.discounts)}\n`;
+    if (c.includeRefunds && consolidated.refunds > 0) msg += `Refunds: ${formatINR(consolidated.refunds)}\n`;
+    if (c.includeNetSales) msg += `Net Sales: ${formatINR(consolidated.netSales)}\n`;
+
+    msg += `\n2. OPERATING EXPENSES\n`;
+    if (c.includeMetaAds) msg += `Meta Ads Expenses: ${formatExpenseVal(consolidated.metaAdsExpenses, true)}\n`;
+    if (c.includeShipping) msg += `Shipping Expenses: ${formatExpenseVal(consolidated.shippingExpenses, true)}\n`;
+    if (c.includePackaging && (consolidated.packagingExpenses > 0 || !c.showMissingAsNotEntered)) {
+      msg += `Packaging Expenses: ${formatExpenseVal(consolidated.packagingExpenses, true)}\n`;
+    }
+    if (c.includeOther) msg += `Other Expenses: ${formatExpenseVal(consolidated.otherExpenses, true)}\n`;
+    if (c.includeTotalExpenses) msg += `Total Expenses: ${formatINR(consolidated.totalExpenses)}\n`;
+
+    msg += `\n3. CONSOLIDATED SUMMARY\n`;
+    msg += `Total Orders: ${consolidated.totalOrders}\n`;
+    msg += `Total Sales: ${formatINR(consolidated.grossSales)}\n`;
+    msg += `Total Expenses: ${formatINR(consolidated.totalExpenses)}\n`;
+    if (c.includeNetBalance) msg += `Net Balance: ${formatINR(consolidated.netBalance)}\n`;
+    msg += `Active Sales Days: ${activeDays.length}\n`;
+    if (activeDays.length > 0) {
+      msg += `Average Daily Sales: ${formatINR(consolidated.grossSales / activeDays.length)} / day\n`;
+    }
+
+    msg += `\nRegards`;
+    return msg;
+  }
 
   if (format === 'concise') {
     // Concise bullet format

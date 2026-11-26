@@ -31,7 +31,7 @@ router.post('/generate', (req, res) => {
     }
 
     const reportData = calculateDailyReport(startDate, endDate);
-    const messageText = generateWhatsAppMessage(reportData, customSettings, format);
+    const messageText = generateWhatsAppMessage(reportData, customSettings, format, reportType);
 
     let historyId = null;
     if (saveToHistory) {
